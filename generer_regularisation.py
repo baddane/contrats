@@ -79,6 +79,11 @@ METIER_AR = {
     "Vendeur/Vendeuse": "بائع(ة)",
 }
 NATIONALITE_AR = {"0": "مغربية"}
+# Conseiller ANAPEC signataire, par agence.
+CONSEILLER = {
+    "AGADIR": "BRAHIM ALAAOUCH",
+    "INEZGANE AIT MELLOUL": "SAID EN KHAL",
+}
 
 def fdate(s):
     """'8/13/2026' (format US du fichier) -> '13/08/2026'."""
@@ -152,13 +157,17 @@ def avenant(r, numero):
     fill(p, "Nom et prénom :", nom)
     fill(p, "CIN :", r["CIN"].strip().upper())
     fill(p, "Date de naissance :", fdate(r["DATE_NAISSANCE"]))
-    fill(para(d, "représentée par l’agence"), "l’agence", f"ANAPEC {r['NOM_AGENCE'].strip()}")
+    agence = r["NOM_AGENCE"].strip()
+    fill(para(d, "représentée par l’agence"), "l’agence",
+         f"ANAPEC {agence}, en la personne de M. {CONSEILLER[agence]}")
     p = para(d, "ci-après dénommé le « contrat initial »")
     fill(p, "n°", ref)
     fill(p, "signé le", fdate(r["DATE_SIGNATURE"]))
     fill(para(d, "portant la même référence"), "référence n°", ref)
     fill(para(d, "soit le"), "soit le", fdate(r["DATE_EFFET"]) + ".")
-    fill(para(d, "Fait à"), "Fait à", VILLE_FR[r["NOM_AGENCE"].strip()])
+    p = para(d, "Fait à")
+    fill(p, "Fait à", VILLE_FR[agence])
+    fill(p, ", le", fdate(r["DATE_SIGNATURE"]))
     return d
 
 
@@ -194,7 +203,10 @@ def contrat(r):
     if metier:
         fill(para(d, "للقيام بأنشطة"), "أنشطة", METIER_AR.get(metier, metier))
     fill(para(d, "يحدد مبلغها"), "في", r["REMUNERATION"].strip())
-    fill(para(d, "حرر ب"), "حرر ب", VILLE_AR[agence])
+    p = para(d, "حرر ب")
+    fill(p, "حرر ب", VILLE_AR[agence])
+    fill(p, "بتاريخ", fdate(r["DATE_SIGNATURE"]), rtl=True)
+    d.tables[0].cell(1, 0).paragraphs[0].add_run(CONSEILLER[agence])
     return d
 
 
