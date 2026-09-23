@@ -137,6 +137,15 @@ def _insert(p, index, value):
         pos += len(t)
 
 
+def vider(doc):
+    """Retire les pointillés restés sans donnée : la ligne reste vide."""
+    ps = list(doc.paragraphs) + [p for t in doc.tables for row in t.rows
+                                 for c in row.cells for p in c.paragraphs]
+    for p in ps:
+        while m := LEADER.search(p.text):
+            replace_span(p, m.start(), m.end(), " ")
+
+
 def para(doc, contains):
     for p in doc.paragraphs:
         if contains in p.text:
@@ -168,6 +177,7 @@ def avenant(r, numero):
     p = para(d, "Fait à")
     fill(p, "Fait à", VILLE_FR[agence])
     fill(p, ", le", fdate(r["DATE_SIGNATURE"]))
+    vider(d)
     return d
 
 
@@ -206,13 +216,11 @@ def contrat(r):
     # Valeurs fixes, identiques au modèle édité par le système ANAPEC.
     fill(para(d, "إجازة سنوية"), "العمل", "18 يوم")
     fill(para(d, "القيام بالعمل لمدة"), "لمدة", "44")
-    p = para(d, "الحالات الخاصة")
-    m = LEADER.search(p.text)
-    replace_span(p, m.start(), len(p.text), "")
     p = para(d, "حرر ب")
     fill(p, "حرر ب", VILLE_AR[agence])
     fill(p, "بتاريخ", fdate(r["DATE_SIGNATURE"]), rtl=True)
     d.tables[0].cell(1, 0).paragraphs[0].add_run(CONSEILLER[agence])
+    vider(d)
     return d
 
 
