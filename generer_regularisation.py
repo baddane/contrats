@@ -21,6 +21,9 @@ TPL_AVENANT = ROOT / "avenant regularisation 11_09.docx"
 TPL_CONTRAT = ROOT / "نموذج اتفاقية-التدريب بقصد التكوين من أجل الادماج.docx"
 OUT = ROOT / "regularisation"
 
+# Agences traitées.
+AGENCES = {"AGADIR", "INEZGANE AIT MELLOUL"}
+
 RLM = "‏"
 LEADER = re.compile(r"[.…]{2,}[.…  ]*")
 
@@ -201,7 +204,7 @@ def safe(s):
 
 def main():
     with open(CSV, encoding="cp1252", newline="") as f:
-        rows = list(csv.DictReader(f))
+        rows = [r for r in csv.DictReader(f) if r["NOM_AGENCE"].strip() in AGENCES]
 
     rows.sort(key=lambda r: (dt.datetime.strptime(r["DATE_SIGNATURE"].strip(), "%m/%d/%Y"),
                              r["REF_CONTRAT"].strip()))
