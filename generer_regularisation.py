@@ -3,8 +3,8 @@
 Pour chaque contrat du fichier de suivi :
   - l'avenant de régularisation (FR) pré-rempli ;
   - le nouveau contrat de stage de formation-insertion (AR) pré-rempli ;
-Les avenants sont numérotés 1/2026, 2/2026, … par ordre de date de signature
-du contrat initial.
+Les avenants sont numérotés 01/2026, 02/2026, … séparément pour chaque agence,
+par ordre de date de signature du contrat initial.
 
 Usage : python3 generer_regularisation.py
 """
@@ -205,8 +205,11 @@ def main():
 
     rows.sort(key=lambda r: (dt.datetime.strptime(r["DATE_SIGNATURE"].strip(), "%m/%d/%Y"),
                              r["REF_CONTRAT"].strip()))
-    for n, r in enumerate(rows, 1):
-        numero = f"{n}/2026"
+    compteurs = {}
+    for r in rows:
+        agence = r["NOM_AGENCE"].strip()
+        compteurs[agence] = compteurs.get(agence, 0) + 1
+        numero = f"{compteurs[agence]:02d}/2026"
         ref = safe(r["REF_CONTRAT"])
         nom = safe(clean(f"{r['NOM_CANDIDAT']} {r['PRENOM']}").upper())
         dossier = OUT / safe(r["NOM_AGENCE"]) / f"{ref} - {nom}"
