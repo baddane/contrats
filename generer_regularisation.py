@@ -3,7 +3,8 @@
 Pour chaque contrat du fichier de suivi :
   - l'avenant de régularisation (FR) pré-rempli ;
   - le nouveau contrat de stage de formation-insertion (AR) pré-rempli ;
-et un tableau de suivi .xlsx avec les colonnes à renseigner mises en évidence.
+Les avenants sont numérotés 1/2026, 2/2026, … par ordre de date de signature
+du contrat initial.
 
 Usage : python3 generer_regularisation.py
 """
@@ -13,8 +14,6 @@ import re
 from pathlib import Path
 
 import docx
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
 
 ROOT = Path(__file__).parent
 CSV = ROOT / "CIA-A-régulariser-Souss Massa.csv"
@@ -78,14 +77,6 @@ METIER_AR = {
 }
 NATIONALITE_AR = {"0": "مغربية"}
 
-# Colonnes du tableau de suivi à renseigner (en rouge dans le fichier OneDrive).
-COLS_A_RENSEIGNER = [
-    "Date Contact Employeur",
-    "Contrat à régulariser OUI/NON",
-    "Date Signature du dossier de régularisation",
-]
-
-
 def fdate(s):
     """'8/13/2026' (format US du fichier) -> '13/08/2026'."""
     return dt.datetime.strptime(s.strip(), "%m/%d/%Y").strftime("%d/%m/%Y") if s.strip() else ""
@@ -145,12 +136,12 @@ def para(doc, contains):
     raise ValueError(f"Paragraphe introuvable : {contains!r}")
 
 
-def avenant(r):
+def avenant(r, numero):
     d = docx.Document(TPL_AVENANT)
     ref = r["REF_CONTRAT"].strip()
     nom = clean(f"{r['NOM_CANDIDAT']} {r['PRENOM']}").upper()
 
-    fill(para(d, "AVENANT DE RÉGULARISATION"), "N°", ref)
+    fill(para(d, "AVENANT DE RÉGULARISATION"), "N°", numero)
     p = para(d, "Raison Sociale")
     fill(p, "Raison Sociale", clean(r["RAISON_SOCIALE"]))
     fill(p, "Adresse :", clean(r["ADRESSE"]))
@@ -212,51 +203,17 @@ def main():
     with open(CSV, encoding="cp1252", newline="") as f:
         rows = list(csv.DictReader(f))
 
-    for r in rows:
+    rows.sort(key=lambda r: (dt.datetime.strptime(r["DATE_SIGNATURE"].strip(), "%m/%d/%Y"),
+                             r["REF_CONTRAT"].strip()))
+    for n, r in enumerate(rows, 1):
+        numero = f"{n}/2026"
         ref = safe(r["REF_CONTRAT"])
         nom = safe(clean(f"{r['NOM_CANDIDAT']} {r['PRENOM']}").upper())
         dossier = OUT / safe(r["NOM_AGENCE"]) / f"{ref} - {nom}"
         dossier.mkdir(parents=True, exist_ok=True)
-        avenant(r).save(dossier / f"2 - Avenant de régularisation {ref}.docx")
         contrat(r).save(dossier / f"1 - Nouveau contrat {ref}.docx")
+        avenant(r, numero).save(dossier / f"2 - Avenant N° {safe(numero)}.docx")
 
-    # Tableau de suivi
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "A régulariser"
-    headers = list(rows[0].keys())
-    ws.append(headers)
-    red = PatternFill("solid", fgColor="FF0000")
-    yellow = PatternFill("solid", fgColor="FFFF00")
-    for c, h in enumerate(headers, 1):
-        cell = ws.cell(1, c)
-        cell.font = Font(bold=True, color="FFFFFF" if h in COLS_A_RENSEIGNER else "000000")
-        cell.alignment = Alignment(wrap_text=True, vertical="center")
-        if h in COLS_A_RENSEIGNER:
-            cell.fill = red
-    date_cols = {"DATE_CONTRAT", "DATE_SIGNATURE", "DATE_EFFET", "DATE_RESILIATION",
-                 "DATE_OFFRE", "DATE_NAISSANCE", "DATE_INSCRIPTION"}
-    for r in rows:
-        vals = []
-        for h in headers:
-            v = r[h].strip()
-            if h in date_cols and v:
-                v = dt.datetime.strptime(v, "%m/%d/%Y").date()
-            if h == "Contrat à régulariser OUI/NON" and not r["DATE_RESILIATION"].strip():
-                v = "OUI"
-            vals.append(v)
-        ws.append(vals)
-        if r["DATE_RESILIATION"].strip():
-            for c in range(1, len(headers) + 1):
-                ws.cell(ws.max_row, c).fill = yellow
-    for c, h in enumerate(headers, 1):
-        for row in ws.iter_rows(min_row=2, min_col=c, max_col=c):
-            if isinstance(row[0].value, dt.date):
-                row[0].number_format = "DD/MM/YYYY"
-        ws.column_dimensions[ws.cell(1, c).column_letter].width = 22 if h in COLS_A_RENSEIGNER else 15
-    ws.freeze_panes = "F2"
-    ws.auto_filter.ref = ws.dimensions
-    wb.save(OUT / "CIA-A-régulariser-Souss Massa.xlsx")
     print(f"{len(rows)} dossiers générés dans {OUT}")
 
 
