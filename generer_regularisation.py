@@ -203,6 +203,12 @@ def contrat(r):
     if metier:
         fill(para(d, "للقيام بأنشطة"), "أنشطة", METIER_AR.get(metier, metier))
     fill(para(d, "يحدد مبلغها"), "في", r["REMUNERATION"].strip())
+    # Valeurs fixes, identiques au modèle édité par le système ANAPEC.
+    fill(para(d, "إجازة سنوية"), "العمل", "18 يوم")
+    fill(para(d, "القيام بالعمل لمدة"), "لمدة", "44")
+    p = para(d, "الحالات الخاصة")
+    m = LEADER.search(p.text)
+    replace_span(p, m.start(), len(p.text), "")
     p = para(d, "حرر ب")
     fill(p, "حرر ب", VILLE_AR[agence])
     fill(p, "بتاريخ", fdate(r["DATE_SIGNATURE"]), rtl=True)
